@@ -5,29 +5,14 @@
 
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Logging functions
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+if [[ ! -f "$SCRIPT_DIR/lib.sh" ]]; then
+    echo "Error: missing $SCRIPT_DIR/lib.sh (required by this script)" >&2
+    exit 1
+fi
+# shellcheck source=lib.sh
+source "$SCRIPT_DIR/lib.sh"
 
 # Check if Homebrew is installed
 check_homebrew() {
@@ -118,7 +103,8 @@ list_outdated() {
 
 # Backup installed packages
 backup_packages() {
-    local backup_file="homebrew-backup-$(date +%Y%m%d-%H%M%S).txt"
+    local backup_file
+    backup_file="homebrew-backup-$(date +%Y%m%d-%H%M%S).txt"
     
     log_info "Creating backup of installed packages to $backup_file..."
     

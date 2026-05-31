@@ -33,10 +33,12 @@ cd MacSetup
 chmod +x *.sh
 
 ./brew.sh                 # Install Homebrew and command-line tools
-./brew-apps.sh            # Install GUI applications
+./brew-apps.sh            # Install GUI applications (and PowerShell)
 ./git-setup.sh            # Configure git with global gitignore
 ./zsh-setup.sh            # Setup Oh-My-Zsh with plugins and theme
 ./defaults.sh             # Apply macOS system settings
+./mackup-setup.sh         # Sync app dotfiles via iCloud (Mackup)
+./mas-apps.sh             # Install Mac App Store apps
 ```
 
 ### Option 3: Direct Download (no git required)
@@ -44,8 +46,10 @@ chmod +x *.sh
 ```shell
 cd ~/Downloads
 
-# Download and run the master installer
+# Download and run the master installer.
+# lib.sh is required — every other script sources it for shared logging helpers.
 curl -O https://raw.githubusercontent.com/jameskilbynet/MacSetup/master/install.sh
+curl -O https://raw.githubusercontent.com/jameskilbynet/MacSetup/master/lib.sh
 curl -O https://raw.githubusercontent.com/jameskilbynet/MacSetup/master/brew.sh
 curl -O https://raw.githubusercontent.com/jameskilbynet/MacSetup/master/brew-apps.sh
 curl -O https://raw.githubusercontent.com/jameskilbynet/MacSetup/master/brew-maintenance.sh
@@ -53,6 +57,9 @@ curl -O https://raw.githubusercontent.com/jameskilbynet/MacSetup/master/git-setu
 curl -O https://raw.githubusercontent.com/jameskilbynet/MacSetup/master/gitignore_global
 curl -O https://raw.githubusercontent.com/jameskilbynet/MacSetup/master/zsh-setup.sh
 curl -O https://raw.githubusercontent.com/jameskilbynet/MacSetup/master/defaults.sh
+curl -O https://raw.githubusercontent.com/jameskilbynet/MacSetup/master/mackup-setup.sh
+curl -O https://raw.githubusercontent.com/jameskilbynet/MacSetup/master/mackup.cfg
+curl -O https://raw.githubusercontent.com/jameskilbynet/MacSetup/master/mas-apps.sh
 
 chmod +x *.sh
 ./install.sh
@@ -61,27 +68,27 @@ chmod +x *.sh
 ## Scripts Overview
 
 ### `brew.sh`
-Installs Homebrew and essential command-line tools including:
+Installs Homebrew and essential command-line tools:
 
-**Development & DevOps:**
-- ansible, awscli, helm, kubernetes-cli, kubectx, k9s
+**DevOps & Infrastructure:**
+- ansible, awscli, govc (vSphere CLI), helm
+- kubernetes-cli, kubectx, k9s
 - terraform, packer, vault (HashiCorp tools)
-- govc (vSphere CLI), jq (JSON processor)
-- wireguard-tools (VPN configuration)
+- wireguard-tools
 
 **Modern CLI Tools:**
-- bat (better cat), eza (modern ls), fd (better find)
-- ripgrep (faster grep), fzf (fuzzy finder)
-- git-delta, lazygit, httpie, tldr, zoxide
-- btop, htop (system monitors), ncdu (disk usage)
+- btop, eza, fd, fzf, gh (GitHub CLI)
+- git-delta, httpie, jq, lazygit
+- ripgrep, tldr, zoxide
 
 **System Utilities:**
-- mas (Mac App Store CLI), mackup (settings backup)
-- nmap, tmux, watch, zsh
-- openssl, ruby, asciinema
+- asciinema, htop, mackup, mas (Mac App Store CLI)
+- ncdu, nmap, openssl, tmux, watch
+
+**Programming Languages:**
+- node, ruby, zsh
 
 **Additional Features:**
-- Mac App Store applications (Pocket, iHosts, Slack, etc.)
 - Handles Apple Silicon Mac PATH configuration automatically
 - Individual package error handling with summary reporting
 
@@ -89,17 +96,27 @@ Installs Homebrew and essential command-line tools including:
 Installs GUI applications via Homebrew Cask, organized by category:
 
 - **Browsers**: Firefox, Google Chrome
-- **Development**: GitHub Desktop, iTerm2, Warp, VS Code, Postman, PowerShell
+- **Development**: Claude, Docker, GitHub Desktop, iTerm2, Warp, Postman, VS Code
 - **Creative & Productivity**: Adobe Creative Cloud, Moom (window management)
-- **System Utilities**: Balena Etcher, iStat Menus, Remote Desktop Manager
-- **Media & Entertainment**: Kindle, Plex, Plexamp, VLC
-- **Communication**: Discord, Signal, Zoom, Nextcloud, Elgato Stream Deck, Deskpad
+- **System Utilities**: Balena Etcher, Cloudflare WARP, iStat Menus, JDownloader, NordVPN, Remote Desktop Manager
+- **Media & Entertainment**: OBS, Plex, Plexamp, VLC
+- **Communication**: Signal
 - **Enterprise**: VMware Horizon Client
+
+PowerShell is installed directly from the official `.pkg` (the Homebrew cask was retired and the Microsoft tap formula is currently broken).
 
 **Features:**
 - Optional PowerShell module installation (VMware PowerCLI)
 - Individual package error handling
 - Installation summary with failed package list
+
+### `mas-apps.sh`
+Installs Mac App Store applications via the `mas` CLI. Requires you to be signed in to the App Store.
+
+- **iHosts** — hosts-file editor
+
+### `mackup-setup.sh`
+Configures [Mackup](https://github.com/lra/mackup) to sync application dotfiles via iCloud Drive. Installs `~/.mackup.cfg`, then prompts to backup / restore / list / skip.
 
 ### `brew-maintenance.sh`
 Maintenance utilities for keeping Homebrew healthy:
@@ -177,9 +194,9 @@ Applies comprehensive macOS system preferences:
 
 To customize which packages are installed:
 
-1. **Edit `brew.sh`**: Modify the `formulas` array (around line 72) to add/remove CLI tools
-2. **Edit `brew-apps.sh`**: Modify the category arrays (lines 47-90) to add/remove GUI applications
-3. **Mac App Store apps**: Update the `mas_apps` associative array in `brew.sh` (line 142)
+1. **Edit `brew.sh`**: Modify the `formulas` array inside `install_formulas()` to add/remove CLI tools
+2. **Edit `brew-apps.sh`**: Modify the category arrays inside `install_cask_apps()` to add/remove GUI applications
+3. **Mac App Store apps**: Update the `MAS_APPS` associative array at the top of `mas-apps.sh`
 
 ### Example: Adding a new CLI tool
 ```bash
