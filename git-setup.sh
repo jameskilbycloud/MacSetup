@@ -22,8 +22,56 @@ if [ ! -f "$SCRIPT_DIR/gitignore_global" ]; then
     exit 1
 fi
 
+# Configure git identity — without this, commits on a fresh Mac fail or get
+# attributed to a guessed hostname address. Existing values are left alone.
+configure_identity() {
+    local current_name current_email
+
+    current_name=$(git config --global user.name || true)
+    current_email=$(git config --global user.email || true)
+
+    if [[ -n "$current_name" && -n "$current_email" ]]; then
+        log_info "Git identity already set: $current_name <$current_email>"
+        return 0
+    fi
+
+    # Non-interactive (CI, piped input): warn and move on rather than hang.
+    if [[ ! -t 0 ]]; then
+        log_warning "No git identity set and no TTY to prompt — skipping."
+        log_info "Set it later: git config --global user.name 'Your Name'"
+        return 0
+    fi
+
+    if [[ -z "$current_name" ]]; then
+        read -rp "$(echo -e "${YELLOW}?${NC} Git user.name (blank to skip): ")" current_name
+        if [[ -n "$current_name" ]]; then
+            git config --global user.name "$current_name"
+            log_success "Set user.name to '$current_name'"
+        else
+            log_warning "Skipped user.name"
+        fi
+    fi
+
+    if [[ -z "$current_email" ]]; then
+        read -rp "$(echo -e "${YELLOW}?${NC} Git user.email (blank to skip): ")" current_email
+        if [[ -n "$current_email" ]]; then
+            git config --global user.email "$current_email"
+            log_success "Set user.email to '$current_email'"
+        else
+            log_warning "Skipped user.email"
+        fi
+    fi
+}
+
+configure_identity
+
 # Copy gitignore_global to home directory
 log_info "Installing global gitignore..."
+if [[ -f "$HOME/.gitignore_global" ]] \
+   && ! cmp -s "$SCRIPT_DIR/gitignore_global" "$HOME/.gitignore_global"; then
+    log_warning "Existing ~/.gitignore_global differs — backing up to ~/.gitignore_global.bak"
+    cp "$HOME/.gitignore_global" "$HOME/.gitignore_global.bak"
+fi
 cp "$SCRIPT_DIR/gitignore_global" "$HOME/.gitignore_global"
 log_success "Copied gitignore_global to ~/.gitignore_global"
 
@@ -54,6 +102,13 @@ fi
 log_header "Git Configuration Complete"
 
 echo -e "${GREEN}Summary:${NC}"
+final_name=$(git config --global user.name || true)
+final_email=$(git config --global user.email || true)
+if [[ -n "$final_name" && -n "$final_email" ]]; then
+    echo -e "  • Git identity: $final_name <$final_email>"
+else
+    echo -e "  • ${YELLOW}Git identity not set${NC} — run: git config --global user.name 'Your Name'"
+fi
 echo -e "  • Global gitignore installed at ~/.gitignore_global"
 echo -e "  • Git configured to exclude .DS_Store and other macOS files globally"
 echo -e "  • Default branch set to 'main'"

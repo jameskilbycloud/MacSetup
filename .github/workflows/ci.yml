@@ -45,6 +45,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The lint job runs on Ubuntu (bash 5), so it cannot catch constructs that
+      # break on the bash 3.2 macOS actually ships — e.g. `declare -A`. Parse
+      # every script with /bin/bash explicitly to cover a factory-fresh Mac.
+      - name: bash 3.2 parse check (/bin/bash)
+        run: |
+          set -e
+          /bin/bash --version | head -1
+          shopt -s nullglob
+          for f in *.sh; do
+            echo "Parsing $f with /bin/bash"
+            /bin/bash -n "$f"
+          done
+        shell: bash
+
       - name: Tap HashiCorp (required for packer/terraform/vault)
         run: brew tap hashicorp/tap
 

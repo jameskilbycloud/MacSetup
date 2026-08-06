@@ -16,11 +16,15 @@ source "$SCRIPT_DIR/lib.sh"
 
 # ──────────────────────────────────────────────
 # App list — add/remove entries here
-# Format: ["APP_ID"]="App Name"
+# Format: "APP_ID:App Name"
 # Find IDs: mas search <name>
+#
+# NB: a plain indexed array, not `declare -A`. macOS ships bash 3.2, which has
+# no associative arrays, and this repo targets factory-fresh Macs where
+# Homebrew's bash 5 isn't installed yet.
 # ──────────────────────────────────────────────
-declare -A MAS_APPS=(
-    ["1102004240"]="iHosts"
+MAS_APPS=(
+    "1102004240:iHosts"
 )
 
 check_mas() {
@@ -51,8 +55,9 @@ install_mas_apps() {
     local failed=()
     local succeeded=()
 
-    for app_id in "${!MAS_APPS[@]}"; do
-        local app_name="${MAS_APPS[$app_id]}"
+    for entry in "${MAS_APPS[@]}"; do
+        local app_id="${entry%%:*}"    # everything before the first colon
+        local app_name="${entry#*:}"   # everything after it
         log_info "Installing ${app_name} (ID: ${app_id})..."
 
         if mas install "$app_id" 2>/dev/null || mas install "$app_id"; then

@@ -154,7 +154,17 @@ install_powershell() {
     fi
 
     local url="https://github.com/PowerShell/PowerShell/releases/download/${latest_tag}/${pkg_name}"
-    local tmp_pkg="/tmp/${pkg_name}"
+
+    # Download into a private temp dir rather than a predictable /tmp path.
+    # /tmp is world-writable, so a predictable filename lets another local
+    # process swap the .pkg between download and `sudo installer` — which would
+    # then install attacker-supplied content as root.
+    local tmp_dir
+    tmp_dir=$(mktemp -d) || { log_error "Could not create temp directory"; return 1; }
+    # shellcheck disable=SC2064  # expand tmp_dir now, not at trap time
+    trap "rm -rf '$tmp_dir'" RETURN
+
+    local tmp_pkg="${tmp_dir}/${pkg_name}"
 
     log_info "Downloading PowerShell ${version} (${arch})..."
     if ! curl -fsSL --progress-bar "$url" -o "$tmp_pkg"; then
@@ -165,10 +175,8 @@ install_powershell() {
     log_info "Installing package (requires sudo)..."
     if sudo installer -pkg "$tmp_pkg" -target /; then
         log_success "Installed: PowerShell ${version}"
-        rm -f "$tmp_pkg"
     else
         log_error "Failed to install PowerShell package"
-        rm -f "$tmp_pkg"
         return 1
     fi
 }

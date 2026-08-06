@@ -133,9 +133,12 @@ defaults write com.apple.dock expose-animation-duration -float 0.1
 # Apply Changes
 ###############################################################################
 
-# Restart affected applications
-killall Finder
-killall Dock
-killall SystemUIServer
+# Restart affected applications.
+# `|| true` because killall exits non-zero when no matching process is running,
+# which under `set -e` would abort this script — and with it the rest of
+# install.sh, skipping every step that follows.
+killall Finder || true
+killall Dock || true
+killall SystemUIServer || true
 
 echo "macOS defaults applied successfully! Some changes may require a logout/restart."

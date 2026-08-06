@@ -258,8 +258,7 @@ brew install hashicorp/tap/terraform
 - The script will pause and wait for you to sign in
 
 **MAS (Mac App Store CLI) errors**
-- Some bash compatibility issues may occur with `declare -A`
-- MAS installations will be skipped if this occurs
+- Make sure you are signed in to the App Store before running the script
 - You can manually install: `mas install <app-id>`
 
 **Permission errors**
