@@ -2,6 +2,17 @@
 
 A collection of scripts to setup a factory fresh Mac with essential settings and software. The scripts are designed to be robust, user-friendly, and easily customizable.
 
+## Two profiles
+
+| Profile | Entry point | For |
+|---|---|---|
+| **Desktop** (this README) | `./install.sh` | A Mac you sit in front of — GUI apps, Mackup/iCloud sync, App Store |
+| **Headless server** | `./server/install-server.sh` | An Apple silicon Mac mini run as an always-on server — see [`server/README.md`](server/README.md) |
+
+Both share `lib.sh`, `git-setup.sh` and `zsh-setup.sh`. The server profile swaps
+Docker Desktop for Colima, never sleeps, sets up key-only SSH, and installs
+almost no GUI software.
+
 ## Features
 
 - ✅ **Robust error handling** - Scripts continue gracefully when individual packages fail

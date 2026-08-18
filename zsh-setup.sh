@@ -208,8 +208,16 @@ EOF
 
 # Install Nerd Font for Powerlevel10k
 install_nerd_font() {
+    # A headless server has no display to render glyphs on, so the server
+    # installer sets MACSETUP_SKIP_FONT=1 to reuse this script without pulling
+    # in a font cask.
+    if [[ -n "${MACSETUP_SKIP_FONT:-}" ]]; then
+        log_info "MACSETUP_SKIP_FONT set — skipping Nerd Font installation"
+        return 0
+    fi
+
     log_info "Checking for Nerd Font..."
-    
+
     if ! brew list --cask font-hack-nerd-font &> /dev/null; then
         log_info "Installing Hack Nerd Font..."
         brew install --cask font-hack-nerd-font

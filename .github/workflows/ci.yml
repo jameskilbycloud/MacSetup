@@ -24,7 +24,7 @@ jobs:
         run: |
           set -e
           shopt -s nullglob
-          for f in *.sh; do
+          for f in *.sh server/*.sh; do
             echo "Parsing $f"
             bash -n "$f"
           done
@@ -53,7 +53,7 @@ jobs:
           set -e
           /bin/bash --version | head -1
           shopt -s nullglob
-          for f in *.sh; do
+          for f in *.sh server/*.sh; do
             echo "Parsing $f with /bin/bash"
             /bin/bash -n "$f"
           done
@@ -62,22 +62,32 @@ jobs:
       - name: Tap HashiCorp (required for packer/terraform/vault)
         run: brew tap hashicorp/tap
 
-      - name: Validate formulas in brew.sh
+      - name: Validate formulas (brew.sh + server/brew-server.sh)
         run: |
           set -euo pipefail
 
-          formulas=$(awk '/^install_formulas\(\) \{/,/^\}/' brew.sh \
-            | grep -E '^[[:space:]]+"[a-z0-9/-]+"' \
-            | grep -oE '"[a-z0-9/-]+"' \
-            | tr -d '"')
+          # Pull the quoted entries out of a package-list function body. Only
+          # lines that are *just* a quoted string match, so inline comments and
+          # log_* calls in the same function are ignored.
+          extract() {
+            awk "/^$2\(\) \{/,/^\}/" "$1" \
+              | grep -E '^[[:space:]]+"[a-z0-9/-]+"' \
+              | grep -oE '"[a-z0-9/-]+"' \
+              | tr -d '"'
+          }
+
+          formulas=$(
+            extract brew.sh install_formulas
+            extract server/brew-server.sh install_formulas
+          )
 
           if [[ -z "$formulas" ]]; then
-            echo "::error::Could not extract any formulas from brew.sh — parser is stale"
+            echo "::error::Could not extract any formulas — the parser is stale"
             exit 1
           fi
 
           missing=()
-          for f in $formulas; do
+          for f in $(echo "$formulas" | sort -u); do
             if brew info --formula "$f" >/dev/null 2>&1; then
               echo "  ok  $f"
             else
@@ -91,22 +101,29 @@ jobs:
             exit 1
           fi
 
-      - name: Validate casks in brew-apps.sh
+      - name: Validate casks (brew-apps.sh + server/brew-server.sh)
         run: |
           set -euo pipefail
 
-          casks=$(awk '/^install_cask_apps\(\) \{/,/^\}/' brew-apps.sh \
-            | grep -E '^[[:space:]]+"[a-z0-9-]+"' \
-            | grep -oE '"[a-z0-9-]+"' \
-            | tr -d '"')
+          extract() {
+            awk "/^$2\(\) \{/,/^\}/" "$1" \
+              | grep -E '^[[:space:]]+"[a-z0-9-]+"' \
+              | grep -oE '"[a-z0-9-]+"' \
+              | tr -d '"'
+          }
+
+          casks=$(
+            extract brew-apps.sh install_cask_apps
+            extract server/brew-server.sh install_casks
+          )
 
           if [[ -z "$casks" ]]; then
-            echo "::error::Could not extract any casks from brew-apps.sh — parser is stale"
+            echo "::error::Could not extract any casks — the parser is stale"
             exit 1
           fi
 
           missing=()
-          for c in $casks; do
+          for c in $(echo "$casks" | sort -u); do
             if brew info --cask "$c" >/dev/null 2>&1; then
               echo "  ok  $c"
             else
