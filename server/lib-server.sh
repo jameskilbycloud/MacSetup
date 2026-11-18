@@ -55,8 +55,8 @@ prompt_default() {
 
 # This profile targets Apple silicon Macs only. Everything downstream assumes
 # it: the Homebrew prefix is /opt/homebrew, Colima uses Virtualization.framework
-# with Rosetta, and the Actions runner downloads the osx-arm64 build. Fail fast
-# rather than half-installing an unsupported combination.
+# (arm64 images only), and the Actions runner downloads the osx-arm64 build.
+# Fail fast rather than half-installing an unsupported combination.
 require_apple_silicon() {
     if [[ "$(uname)" != "Darwin" ]]; then
         log_error "This script is for macOS only."
