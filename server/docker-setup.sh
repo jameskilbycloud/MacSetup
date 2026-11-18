@@ -24,9 +24,6 @@ source "$REPO_ROOT/lib.sh"
 # shellcheck source=lib-server.sh
 source "$SCRIPT_DIR/lib-server.sh"
 
-# Set by ensure_rosetta() before start_colima() reads it.
-ROSETTA_AVAILABLE="no"
-
 # Size the VM from the hardware rather than guessing: half the cores and half
 # the RAM leaves the host comfortable while giving containers real capacity.
 suggest_cpus() {
@@ -62,31 +59,6 @@ check_prereqs() {
     log_success "colima and docker CLI found"
 }
 
-# Colima is started with --vz-rosetta below, which needs Rosetta present on the
-# host. A fresh Apple silicon Mac has never installed it, and colima fails at
-# start rather than degrading, so install it up front.
-ensure_rosetta() {
-    if arch -x86_64 /usr/bin/true &>/dev/null; then
-        log_success "Rosetta is installed"
-        return 0
-    fi
-
-    log_info "Rosetta is not installed — it lets the container VM run x86_64 images."
-
-    if ! ask "Install Rosetta now?" y; then
-        log_warning "Skipping Rosetta — Colima will start without x86_64 emulation"
-        return 1
-    fi
-
-    if softwareupdate --install-rosetta --agree-to-license; then
-        log_success "Rosetta installed"
-        return 0
-    fi
-
-    log_warning "Rosetta installation failed — continuing without x86_64 emulation"
-    return 1
-}
-
 start_colima() {
     if colima status &>/dev/null; then
         log_info "Colima is already running:"
@@ -109,15 +81,8 @@ start_colima() {
     local args=(start --cpu "$cpus" --memory "$mem" --disk "$disk"
                 --vm-type=vz --mount-type=virtiofs)
 
-    # Rosetta inside the VM runs x86_64 images that have no arm64 build. Only
-    # request it if the host actually has Rosetta — otherwise colima errors out.
-    if [[ "$ROSETTA_AVAILABLE" == "yes" ]]; then
-        args+=(--vz-rosetta)
-        log_info "Using Virtualization.framework + Rosetta (x86_64 images supported)"
-    else
-        log_warning "Using Virtualization.framework without Rosetta — arm64 images only"
-    fi
-
+    # arm64 images only, deliberately. No Rosetta: anything x86-only runs on an
+    # x86 machine instead, and macOS 27 is the last release with full Rosetta.
     log_info "Starting Colima (${cpus} CPU, ${mem}GB RAM, ${disk}GB disk)..."
     if colima "${args[@]}"; then
         log_success "Colima started"
@@ -173,12 +138,6 @@ main() {
     log_header "Container Runtime — Colima"
 
     check_prereqs
-
-    if ensure_rosetta; then
-        ROSETTA_AVAILABLE=yes
-    else
-        ROSETTA_AVAILABLE=no
-    fi
 
     start_colima || exit 1
     enable_autostart

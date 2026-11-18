@@ -198,6 +198,10 @@ main() {
     require_apple_silicon
     log_header "Homebrew & Server Packages"
 
+    # The Homebrew installer runs NONINTERACTIVE and aborts unless sudo works
+    # without a prompt, so cache the password first.
+    require_sudo
+
     install_homebrew
     update_homebrew
     install_formulas

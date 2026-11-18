@@ -84,6 +84,12 @@ RAM: $(( $(sysctl -n hw.memsize 2>/dev/null || echo 0) / 1024 / 1024 / 1024 ))GB
     fi
     log_success "Internet connectivity confirmed"
 
+    # Prime sudo once for the whole run. Homebrew's NONINTERACTIVE installer
+    # aborts if it cannot sudo without prompting, and brew-server.sh is the
+    # first step to need it. The keepalive outlives each step's subshell.
+    require_sudo
+    log_success "Administrator access confirmed"
+
     if ! xcode-select -p &>/dev/null; then
         log_info "Installing Xcode Command Line Tools (required by Homebrew)..."
         xcode-select --install
@@ -148,6 +154,12 @@ main() {
 
     preflight
 
+    # Before the long Homebrew install: a stock Mac mini can idle-sleep while
+    # it runs. Power has no dependencies, so nothing is lost by going first.
+    run_step "Power Management" \
+        "server/power-setup.sh" \
+        "Never sleep, restart after power failure or freeze, wake on network."
+
     run_step "Homebrew & Server Packages" \
         "server/brew-server.sh" \
         "Installs Homebrew, CLI/DevOps tooling, container tools and Plex Media Server."
@@ -168,17 +180,15 @@ main() {
         "server/defaults-server.sh" \
         "Hostname, no modal dialogs, no App Nap, security-updates-only policy."
 
-    run_step "Power Management" \
-        "server/power-setup.sh" \
-        "Never sleep, restart after power failure or freeze, wake on network."
+    # Screen Sharing before SSH: it is the way back in if the SSH hardening
+    # goes wrong, so it should exist before password login is switched off.
+    run_step "Screen Sharing" \
+        "server/screen-sharing.sh" \
+        "Enables Remote Management as an escape hatch for GUI-only macOS tasks."
 
     run_step "SSH Access" \
         "server/ssh-setup.sh" \
         "Enables Remote Login, installs your public keys, then disables password auth."
-
-    run_step "Screen Sharing" \
-        "server/screen-sharing.sh" \
-        "Enables Remote Management as an escape hatch for GUI-only macOS tasks."
 
     run_step "Container Runtime" \
         "server/docker-setup.sh" \

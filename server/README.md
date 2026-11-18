@@ -11,7 +11,7 @@ because a server and a daily driver want opposite things.
 
 **Apple silicon (M-series) only.** Every script calls `require_apple_silicon`
 and exits on anything else, because the profile hard-assumes it: Homebrew at
-`/opt/homebrew`, Colima on Virtualization.framework with Rosetta, and the
+`/opt/homebrew`, Colima on Virtualization.framework (arm64 images only), and the
 `osx-arm64` Actions runner build. The check reads `hw.optional.arm64` rather
 than `uname -m`, so it also catches a shell running translated under Rosetta —
 which would otherwise resolve Homebrew to `/usr/local` and pick the wrong VM
@@ -221,18 +221,18 @@ the overwhelming majority of it.
 
 | # | Step | Notes |
 |---|---|---|
-| 1 | **Homebrew & Server Packages** | The long one. Installs Homebrew, ~44 formulas and Plex. Leave it running. |
-| 2 | **Git Configuration** | Prompts for `user.name` / `user.email` if unset |
-| 3 | **Zsh & Oh-My-Zsh** | Asks to reinstall if Oh-My-Zsh exists; on a fresh Mac it won't |
-| 4 | **macOS Server Defaults** | Prompts for a **hostname** — this becomes `<name>.local`. Also asks about disabling Spotlight (defaults to No). |
-| 5 | **Power Management** | Needs `sudo`. Prints your power settings at the end. |
-| 6 | **SSH Access** | ⚠️ See below — the step with real consequences |
-| 7 | **Screen Sharing** | Prompts for which user to grant access to |
-| 8 | **Container Runtime** | Offers to install Rosetta, then prompts for VM CPU/RAM/disk. Defaults are sensible. |
+| 1 | **Power Management** | Needs `sudo`. Runs first so the box can't sleep during the long install. Prints your power settings at the end. |
+| 2 | **Homebrew & Server Packages** | The long one. Installs Homebrew, ~44 formulas and Plex. Leave it running. |
+| 3 | **Git Configuration** | Prompts for `user.name` / `user.email` if unset |
+| 4 | **Zsh & Oh-My-Zsh** | Asks to reinstall if Oh-My-Zsh exists; on a fresh Mac it won't |
+| 5 | **macOS Server Defaults** | Prompts for a **hostname** — this becomes `<name>.local`. Also asks about disabling Spotlight (defaults to No). |
+| 6 | **Screen Sharing** | Prompts for which user to grant access to. Comes before SSH so you have a way back in. |
+| 7 | **SSH Access** | ⚠️ See below — the step with real consequences |
+| 8 | **Container Runtime** | Prompts for VM CPU/RAM/disk. Defaults are sensible. |
 | 9 | **GitHub Actions Runner** | Defaults to **No**. Say yes only if you want CI on this box. |
 | 10 | **Unattended Maintenance** | Installs the weekly LaunchAgent |
 
-### ⚠️ Step 6 in detail — don't lock yourself out
+### ⚠️ Step 7 in detail — don't lock yourself out
 
 This is the only step that can cost you access. It's built to make that hard,
 but understand what it's doing:
@@ -452,10 +452,8 @@ start without a logged-in Aqua session.
 - Sizes the VM from the hardware (half the cores, half the RAM, 100GB disk by
   default — all prompted)
 - Uses Virtualization.framework + virtiofs
-- Installs Rosetta if missing and passes `--vz-rosetta`, so x86-only images still
-  run. A fresh Apple silicon Mac has never installed Rosetta and Colima fails at
-  start rather than degrading, so this is checked up front — decline it and the
-  VM starts arm64-only instead
+- Runs arm64 container images only — no Rosetta. Anything x86-only belongs on
+  an x86 machine
 - Registers with `brew services` for autostart
 - Verifies by running `hello-world` and checking the compose plugin
 
